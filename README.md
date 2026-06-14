@@ -2,6 +2,8 @@
 
 Processing Android prototype plus a browser version that can run as a live web app.
 
+Live app: [https://whistle-up-down-app.vercel.app](https://whistle-up-down-app.vercel.app)
+
 ## What is included
 
 - `web/` is a mobile-friendly browser version with microphone whistle detection and device motion selection.
