@@ -1,0 +1,9 @@
+{
+  "name": "Clap Up Down",
+  "short_name": "ClapUpDown",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#0f172a",
+  "icons": []
+}

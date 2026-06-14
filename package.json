@@ -1,0 +1,14 @@
+{
+  "name": "clap-up-down-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite web --host 0.0.0.0",
+    "build": "vite build web --outDir ../dist --emptyOutDir",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.19"
+  }
+}
