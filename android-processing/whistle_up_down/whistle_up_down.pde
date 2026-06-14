@@ -26,12 +26,15 @@ int currentPosition = 0;
 int targetOption = -1;
 int targetAction = 0;  // 0 = UP, 1 = DOWN (like professor's code)
 
-// Clap detection
+// Whistle detection
 float soundLevel = 0.0;
-float prevSoundLevel = 0.0;
-final float CLAP_SPIKE_THRESHOLD = 600.0;
-long lastClapTime = 0;
-final int CLAP_DEBOUNCE_MS = 300;
+float whistleFrequency = 0.0;
+boolean whistleActive = false;
+final float WHISTLE_LEVEL_THRESHOLD = 850.0;
+final float WHISTLE_MIN_HZ = 900.0;
+final float WHISTLE_MAX_HZ = 3600.0;
+long lastWhistleTime = 0;
+final int WHISTLE_DEBOUNCE_MS = 650;
 
 // Accelerometer confirmation (UP/DOWN like scaffold)
 final float Z_ACCEL_THRESHOLD = 4.0;  // Like scaffold: abs(z - 9.8) > 4
@@ -145,20 +148,35 @@ void startAudioRecording() {
         
         if (readResult > 0) {
           float sum = 0;
+          int zeroCrossings = 0;
+          short previousSample = buffer[0];
+          
           for (int i = 0; i < readResult; i++) {
             sum += Math.abs(buffer[i]);
-          }
-          prevSoundLevel = soundLevel;
-          soundLevel = sum / readResult;
-          
-          float spike = soundLevel - prevSoundLevel;
-          
-          if (spike > CLAP_SPIKE_THRESHOLD) {
-            long now = millis();
-            if (now - lastClapTime > CLAP_DEBOUNCE_MS) {
-              lastClapTime = now;
-              onClapDetected();
+            
+            if (i > 0 && ((previousSample < 0 && buffer[i] >= 0) || 
+                (previousSample > 0 && buffer[i] <= 0))) {
+              zeroCrossings++;
             }
+            
+            previousSample = buffer[i];
+          }
+          
+          soundLevel = sum / readResult;
+          whistleFrequency = zeroCrossings * SAMPLE_RATE / (2.0 * readResult);
+          boolean whistleDetected = soundLevel > WHISTLE_LEVEL_THRESHOLD && 
+            whistleFrequency >= WHISTLE_MIN_HZ && 
+            whistleFrequency <= WHISTLE_MAX_HZ;
+          
+          if (whistleDetected && !whistleActive) {
+            long now = millis();
+            if (now - lastWhistleTime > WHISTLE_DEBOUNCE_MS) {
+              lastWhistleTime = now;
+              whistleActive = true;
+              onWhistleDetected();
+            }
+          } else if (!whistleDetected) {
+            whistleActive = false;
           }
         }
       }
@@ -219,7 +237,7 @@ void drawReady() {
   
   fill(100);
   textSize(26);
-  text("Clap to navigate", width/2, height/3 + 60);
+  text("Whistle to navigate", width/2, height/3 + 60);
   text("Phone UP or DOWN to select", width/2, height/3 + 100);
   
   // Start button
@@ -299,12 +317,12 @@ void completeTrial() {
 }
 
 // ============================================================
-// CLAP DETECTION
+// WHISTLE DETECTION
 // ============================================================
-void onClapDetected() {
+void onWhistleDetected() {
   if (appState != AppState.TRIAL) return;
   
-  // ALWAYS allow clapping
+  // ALWAYS allow whistling
   currentPosition = (currentPosition + 1) % NUM_OPTIONS;
 }
 
@@ -338,7 +356,7 @@ void drawUI() {
   // Instruction
   fill(100);
   textSize(24);
-  text("Clap to navigate", width/2, 350);
+  text("Whistle to navigate", width/2, 350);
   
   // Options grid
   int cardSize = 200;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "clap-up-down-v1";
+const CACHE_NAME = "whistle-up-down-v1";
 const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./site.webmanifest"];
 
 self.addEventListener("install", (event) => {

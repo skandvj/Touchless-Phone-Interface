@@ -1,7 +1,9 @@
 const TOTAL_TRIALS = 6;
 const NUM_OPTIONS = 4;
 const MOTION_THRESHOLD = 4;
-const CLAP_DEBOUNCE_MS = 300;
+const WHISTLE_DEBOUNCE_MS = 650;
+const WHISTLE_MIN_HZ = 900;
+const WHISTLE_MAX_HZ = 3600;
 const MOTION_DEBOUNCE_MS = 520;
 
 const AppState = {
@@ -18,7 +20,9 @@ const state = {
   targetAction: 0,
   startTime: 0,
   finishTime: 0,
-  lastClapTime: 0,
+  lastWhistleTime: 0,
+  whistleActive: false,
+  whistleFrequency: 0,
   motionBlockedUntil: 0,
   micLevel: 0,
   previousMicLevel: 0,
@@ -47,7 +51,7 @@ const els = {
   motionStatus: document.querySelector("#motionStatus"),
   invertMotion: document.querySelector("#invertMotion"),
   sensitivity: document.querySelector("#sensitivity"),
-  testClap: document.querySelector("#testClap"),
+  testWhistle: document.querySelector("#testWhistle"),
   testUp: document.querySelector("#testUp"),
   testDown: document.querySelector("#testDown"),
 };
@@ -110,7 +114,7 @@ function completeTrial() {
   state.motionBlockedUntil = performance.now() + MOTION_DEBOUNCE_MS;
 }
 
-function onClapDetected() {
+function onWhistleDetected() {
   if (state.appState !== AppState.TRIAL) {
     return;
   }
@@ -235,7 +239,7 @@ async function requestMicrophone() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(micStream);
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 4096;
     audioData = new Uint8Array(analyser.fftSize);
     source.connect(analyser);
 
@@ -254,30 +258,47 @@ function readAudio() {
 
   analyser.getByteTimeDomainData(audioData);
   let sum = 0;
+  let zeroCrossings = 0;
+  let previousCentered = (audioData[0] - 128) / 128;
 
   for (let index = 0; index < audioData.length; index += 1) {
     const centered = (audioData[index] - 128) / 128;
     sum += centered * centered;
+
+    if (
+      index > 0 &&
+      ((previousCentered < 0 && centered >= 0) || (previousCentered > 0 && centered <= 0))
+    ) {
+      zeroCrossings += 1;
+    }
+
+    previousCentered = centered;
   }
 
   const rms = Math.sqrt(sum / audioData.length);
   const scaledLevel = rms * 1000;
-  const spike = scaledLevel - state.previousMicLevel;
   const sensitivity = Number(els.sensitivity.value);
-  const spikeThreshold = 125 - sensitivity;
-  const levelThreshold = 110 - sensitivity * 0.72;
+  const levelThreshold = 95 - sensitivity * 0.65;
+  const estimatedHz = (zeroCrossings * audioContext.sampleRate) / (2 * audioData.length);
+  const whistleDetected =
+    scaledLevel > levelThreshold && estimatedHz >= WHISTLE_MIN_HZ && estimatedHz <= WHISTLE_MAX_HZ;
   const now = performance.now();
 
   state.micLevel = scaledLevel;
+  state.whistleFrequency = estimatedHz;
   els.micMeter.style.width = `${Math.min(100, scaledLevel * 1.6)}%`;
+  els.micStatus.textContent = whistleDetected ? `${Math.round(estimatedHz)} Hz` : "Listening";
 
   if (
-    scaledLevel > levelThreshold &&
-    spike > spikeThreshold &&
-    now - state.lastClapTime > CLAP_DEBOUNCE_MS
+    whistleDetected &&
+    !state.whistleActive &&
+    now - state.lastWhistleTime > WHISTLE_DEBOUNCE_MS
   ) {
-    state.lastClapTime = now;
-    onClapDetected();
+    state.lastWhistleTime = now;
+    state.whistleActive = true;
+    onWhistleDetected();
+  } else if (!whistleDetected) {
+    state.whistleActive = false;
   }
 
   state.previousMicLevel = scaledLevel * 0.7 + state.previousMicLevel * 0.3;
@@ -330,14 +351,14 @@ function installServiceWorker() {
 
 els.startButton.addEventListener("click", startFromReady);
 els.againButton.addEventListener("click", resetRun);
-els.testClap.addEventListener("click", onClapDetected);
+els.testWhistle.addEventListener("click", onWhistleDetected);
 els.testUp.addEventListener("click", () => onMotionAction(0));
 els.testDown.addEventListener("click", () => onMotionAction(1));
 
 window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     event.preventDefault();
-    onClapDetected();
+    onWhistleDetected();
   }
 
   if (event.key === "ArrowUp") {

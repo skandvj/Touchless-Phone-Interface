@@ -1,12 +1,13 @@
-# Clap Up Down
+# Whistle Up Down
 
 Processing Android prototype plus a browser version that can run as a live web app.
 
 ## What is included
 
-- `web/` is a mobile-friendly browser version with microphone clap detection and device motion selection.
-- `android-processing/clap_up_down/` is the original Processing Android sketch, including the manifest and sketch properties.
-- `.github/workflows/pages.yml` deploys the web app to GitHub Pages when this project is pushed to `main`.
+- `web/` is a mobile-friendly browser version with microphone whistle detection and device motion selection.
+- `android-processing/whistle_up_down/` is the Processing Android sketch, including the manifest and sketch properties.
+- `vercel.json` configures Vercel deployment for the web app.
+- `.github/workflows/pages.yml` can also deploy the web app to GitHub Pages when this project is pushed to `main`.
 
 ## Run the web app locally
 
@@ -17,11 +18,19 @@ npm run dev
 
 Open the local URL from Vite. Use a phone for the real mic and motion flow. On desktop, the test controls and keyboard shortcuts are useful for checking the trial logic:
 
-- Space: clap
+- Space: whistle
 - Up arrow: phone up
 - Down arrow: phone down
 
-## Publish the live web app
+## Publish the live web app on Vercel
+
+```bash
+npx vercel@latest --prod
+```
+
+The included `vercel.json` tells Vercel to build with Vite and serve `dist/`.
+
+## Publish on GitHub Pages
 
 1. Push this repository to GitHub.
 2. In the GitHub repository, open Settings > Pages.
@@ -32,7 +41,7 @@ Open the local URL from Vite. Use a phone for the real mic and motion flow. On d
 
 1. Install Processing with Android Mode.
 2. Install the Ketai library in Processing.
-3. Open `android-processing/clap_up_down/clap_up_down.pde`.
+3. Open `android-processing/whistle_up_down/whistle_up_down.pde`.
 4. Connect an Android phone with USB debugging enabled.
 5. Run from Processing Android Mode.
 
